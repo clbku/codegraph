@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { api } from '../api/client';
 import type { StatsResponse } from '../api/types';
 import { MODULES, SETTINGS_MODULE, type ModuleDef } from './modules';
 import { IconLogo } from './icons';
+import { NavigationProvider } from './navigation';
 
 const ACTIVE_STORAGE_KEY = 'codegraph-ui:active-module';
 
@@ -31,22 +32,29 @@ export function Shell() {
     return () => { cancelled = true; };
   }, []);
 
+  const handleNavigate = useCallback((id: string) => {
+    if (!MODULES.some((m) => m.id === id && !m.disabled) && id !== SETTINGS_MODULE.id) return;
+    setActiveId(id);
+  }, []);
+
   return (
-    <div className="shell">
-      <ActivityBar
-        modules={MODULES}
-        settings={SETTINGS_MODULE}
-        activeId={activeId}
-        onSelect={setActiveId}
-      />
-      <div className="shell-main">
-        <ModuleHeader module={active} />
-        <div className="module-body">
-          <ActiveComponent />
+    <NavigationProvider onNavigate={handleNavigate}>
+      <div className="shell">
+        <ActivityBar
+          modules={MODULES}
+          settings={SETTINGS_MODULE}
+          activeId={activeId}
+          onSelect={setActiveId}
+        />
+        <div className="shell-main">
+          <ModuleHeader module={active} />
+          <div className="module-body">
+            <ActiveComponent />
+          </div>
+          <StatusBar stats={stats} error={statsError} />
         </div>
-        <StatusBar stats={stats} error={statsError} />
       </div>
-    </div>
+    </NavigationProvider>
   );
 }
 

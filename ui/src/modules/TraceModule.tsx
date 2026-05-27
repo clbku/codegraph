@@ -1,5 +1,7 @@
-import { TraceView } from '../components/TraceView';
+import { TraceView, type TraceInitial } from '../components/TraceView';
+import { useModuleInitial } from '../shell/navigation';
 
 export function TraceModule() {
-  return <TraceView />;
+  const initial = useModuleInitial<TraceInitial>('trace');
+  return <TraceView initial={initial ?? undefined} />;
 }

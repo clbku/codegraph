@@ -65,3 +65,41 @@ export interface TraceResponse {
   destinationCallees: Array<{ node: Node; source: string | null }>;
   message?: string;
 }
+
+export interface RouteHandlerRef {
+  id: string;
+  name: string;
+  qualifiedName: string;
+  kind: string;
+  filePath: string;
+  startLine: number;
+  endLine: number;
+  language: string;
+  /** Edge kind that linked the route to this handler ('references' | 'calls'). */
+  via: string;
+}
+
+export interface RouteEntry {
+  /** Route node id. */
+  id: string;
+  /** Uppercase HTTP method (GET/POST/…) or '' when the framework doesn't carry one. */
+  method: string;
+  /** Route path / pattern (best-effort parse out of the node name). */
+  path: string;
+  /** Raw Node.name — preserved so unusual forms like "resource:Users" or "VIEWSET /api" stay visible. */
+  rawName: string;
+  /** Heuristic framework label inferred from filePath + language. */
+  framework: string;
+  language: string;
+  filePath: string;
+  startLine: number;
+  /** Primary handler the route resolves to, if any. */
+  handler: RouteHandlerRef | null;
+  /** Additional handler-ish targets (e.g. inline arrow body call sites). */
+  extraHandlers: RouteHandlerRef[];
+}
+
+export interface RoutesResponse {
+  total: number;
+  routes: RouteEntry[];
+}

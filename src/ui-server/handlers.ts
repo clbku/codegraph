@@ -18,6 +18,9 @@ import type {
   SymbolDetailResponse,
   TraceHop,
   TraceResponse,
+  RouteEntry,
+  RouteHandlerRef,
+  RoutesResponse,
 } from './types';
 
 export class HandlerError extends Error {
@@ -167,6 +170,40 @@ export function handleTrace(cg: CodeGraph, fromName: string, toName: string): Tr
 }
 
 // =============================================================================
+// /api/routes
+// =============================================================================
+
+export function handleRoutes(cg: CodeGraph): RoutesResponse {
+  const routeNodes = cg.getNodesByKind('route');
+
+  const routes: RouteEntry[] = routeNodes.map((node) => {
+    const { method, path } = parseRouteName(node.name);
+    const { primary, extra } = pickHandlers(cg, node.id);
+    return {
+      id: node.id,
+      method,
+      path,
+      rawName: node.name,
+      framework: inferFramework(node.filePath, node.language),
+      language: node.language,
+      filePath: node.filePath,
+      startLine: node.startLine,
+      handler: primary,
+      extraHandlers: extra,
+    };
+  });
+
+  // Stable order: framework → file → line. Makes the table comfortable to scan.
+  routes.sort((a, b) => {
+    if (a.framework !== b.framework) return a.framework.localeCompare(b.framework);
+    if (a.filePath !== b.filePath) return a.filePath.localeCompare(b.filePath);
+    return a.startLine - b.startLine;
+  });
+
+  return { total: routes.length, routes };
+}
+
+// =============================================================================
 // Helpers
 // =============================================================================
 
@@ -217,4 +254,96 @@ function synthEdgeNote(edge: Edge | null): TraceHop['synthesized'] {
 // watcher yet — UI is read-only and re-bake-driven for the MVP.
 export function clearSourceCache(): void {
   sourceCache.clear();
+}
+
+// Route node names look like "GET /users/:id", "POST /v1/login", "VIEWSET /api",
+// "resource:Users", or just "/api/things" — split out method+path best-effort.
+const ROUTE_NAME_RE = /^([A-Z]+)\s+(.+)$/;
+
+function parseRouteName(name: string): { method: string; path: string } {
+  const m = ROUTE_NAME_RE.exec(name);
+  if (m) return { method: m[1]!, path: m[2]! };
+  return { method: '', path: name };
+}
+
+function pickHandlers(cg: CodeGraph, routeId: string): {
+  primary: RouteHandlerRef | null;
+  extra: RouteHandlerRef[];
+} {
+  const edges = cg.getOutgoingEdges(routeId);
+  // Prefer the explicit `references` edge — that's the named handler. Fall back
+  // to `calls` edges, which Express's inline-arrow extractor emits for every
+  // call site in the handler body. Don't surface `contains` etc.
+  const refEdges = edges.filter((e) => e.kind === 'references');
+  const callEdges = edges.filter((e) => e.kind === 'calls');
+
+  const toRef = (edgeKind: string, targetId: string): RouteHandlerRef | null => {
+    const target = cg.getNode(targetId);
+    if (!target) return null;
+    return {
+      id: target.id,
+      name: target.name,
+      qualifiedName: target.qualifiedName,
+      kind: target.kind,
+      filePath: target.filePath,
+      startLine: target.startLine,
+      endLine: target.endLine,
+      language: target.language,
+      via: edgeKind,
+    };
+  };
+
+  let primary: RouteHandlerRef | null = null;
+  for (const e of refEdges) {
+    primary = toRef('references', e.target);
+    if (primary) break;
+  }
+  const extra: RouteHandlerRef[] = [];
+  if (!primary && callEdges.length > 0) {
+    primary = toRef('calls', callEdges[0]!.target);
+    for (const e of callEdges.slice(1, 6)) {
+      const r = toRef('calls', e.target);
+      if (r) extra.push(r);
+    }
+  } else if (primary && callEdges.length > 0) {
+    for (const e of callEdges.slice(0, 5)) {
+      const r = toRef('calls', e.target);
+      if (r && r.id !== primary.id) extra.push(r);
+    }
+  }
+
+  return { primary, extra };
+}
+
+// Best-effort framework label so the UI can group / filter. Pure heuristic —
+// file-path patterns first (they're stronger signals), language as fallback.
+function inferFramework(filePath: string, language: string): string {
+  const lower = filePath.toLowerCase();
+  if (/(^|\/)routes\/(web|api|console|channels)\.php$/.test(lower)) return 'Laravel';
+  if (/(^|\/)routes\.rb$/.test(lower)) return 'Rails';
+  if (/(^|\/)urls\.py$/.test(lower)) return 'Django';
+  if (/\.controller\.(ts|js)$/.test(lower)) return 'NestJS';
+  if (/\+(page|server|layout)(\.server)?\.(ts|js)$/.test(lower) || /\+page\.svelte$/.test(lower)) return 'SvelteKit';
+  if (/(^|\/)pages\/api\//.test(lower)) return 'Next.js';
+  if (/\.routes\.(ts|js)$/.test(lower)) return 'Angular';
+
+  switch (language) {
+    case 'php': return 'Laravel';
+    case 'ruby': return 'Rails';
+    case 'python': return 'Python (FastAPI/Flask/Django)';
+    case 'go': return 'Go (Gin/Echo)';
+    case 'rust': return 'Rust (Axum/Actix)';
+    case 'java':
+    case 'kotlin': return 'Spring';
+    case 'scala': return 'Play';
+    case 'csharp': return 'ASP.NET';
+    case 'swift': return 'Vapor';
+    case 'vue': return 'Vue Router';
+    case 'svelte': return 'SvelteKit';
+    case 'javascript':
+    case 'typescript':
+    case 'tsx':
+    case 'jsx': return 'Express / React Router';
+    default: return language || 'unknown';
+  }
 }

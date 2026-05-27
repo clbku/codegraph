@@ -3,13 +3,32 @@ import { api } from '../api/client';
 import type { SearchHit, SymbolDetailResponse } from '../api/types';
 import { CodeBlock } from './CodeBlock';
 
-export function SymbolExplorer() {
-  const [query, setQuery] = useState('');
+export interface ExploreInitial {
+  /** Preselect this symbol (e.g. when navigating in from Routes). */
+  symbolId?: string;
+  /** Seed the search box. */
+  query?: string;
+}
+
+export function SymbolExplorer({ initial }: { initial?: ExploreInitial }) {
+  const [query, setQuery] = useState(initial?.query ?? '');
   const [hits, setHits] = useState<SearchHit[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [detail, setDetail] = useState<SymbolDetailResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [searching, setSearching] = useState(false);
+
+  // Honour the navigation payload exactly once on mount.
+  useEffect(() => {
+    if (!initial?.symbolId) return;
+    setSelectedId(initial.symbolId);
+    setLoading(true);
+    api.symbol(initial.symbolId)
+      .then(setDetail)
+      .catch(() => setDetail(null))
+      .finally(() => setLoading(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     const trimmed = query.trim();

@@ -7,9 +7,16 @@ import { CodeBlock } from './CodeBlock';
 
 cytoscape.use(dagre);
 
-export function TraceView() {
-  const [from, setFrom] = useState('');
-  const [to, setTo] = useState('');
+export interface TraceInitial {
+  from?: string;
+  to?: string;
+  /** Run the trace immediately on mount (only if both endpoints are set). */
+  autoRun?: boolean;
+}
+
+export function TraceView({ initial }: { initial?: TraceInitial }) {
+  const [from, setFrom] = useState(initial?.from ?? '');
+  const [to, setTo] = useState(initial?.to ?? '');
   const [result, setResult] = useState<TraceResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -27,6 +34,11 @@ export function TraceView() {
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
   }, [from, to]);
+
+  useEffect(() => {
+    if (initial?.autoRun && initial.from && initial.to) runTrace();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const activeIdx = result?.ok ? (hoveredHopIdx ?? 0) : null;
   const activeHop = activeIdx !== null && result ? result.hops[activeIdx] ?? null : null;

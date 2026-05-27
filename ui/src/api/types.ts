@@ -74,3 +74,33 @@ export interface TraceResponse {
   destinationCallees: Array<{ node: NodeT; source: string | null }>;
   message?: string;
 }
+
+export interface RouteHandlerRef {
+  id: string;
+  name: string;
+  qualifiedName: string;
+  kind: string;
+  filePath: string;
+  startLine: number;
+  endLine: number;
+  language: string;
+  via: string;
+}
+
+export interface RouteEntry {
+  id: string;
+  method: string;
+  path: string;
+  rawName: string;
+  framework: string;
+  language: string;
+  filePath: string;
+  startLine: number;
+  handler: RouteHandlerRef | null;
+  extraHandlers: RouteHandlerRef[];
+}
+
+export interface RoutesResponse {
+  total: number;
+  routes: RouteEntry[];
+}

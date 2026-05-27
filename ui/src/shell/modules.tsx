@@ -1,6 +1,7 @@
 import type { ComponentType, ReactNode } from 'react';
 import { ExploreModule } from '../modules/ExploreModule';
 import { TraceModule } from '../modules/TraceModule';
+import { RoutesModule } from '../modules/RoutesModule';
 import { ComingSoonModule } from '../modules/ComingSoonModule';
 import {
   IconSearch, IconFlow, IconFiles, IconStats, IconRoute, IconSettings,
@@ -55,8 +56,7 @@ export const MODULES: ModuleDef[] = [
     title: 'Routes',
     subtitle: 'HTTP routes detected from frameworks',
     icon: <IconRoute />,
-    component: () => <ComingSoonModule name="Routes" hint="Detected HTTP routes (Express, Laravel, Rails, FastAPI…) with one-click trace into the handler chain." />,
-    disabled: true,
+    component: RoutesModule,
   },
 ];
 

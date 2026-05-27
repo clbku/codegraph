@@ -1,5 +1,7 @@
-import { SymbolExplorer } from '../components/SymbolExplorer';
+import { SymbolExplorer, type ExploreInitial } from '../components/SymbolExplorer';
+import { useModuleInitial } from '../shell/navigation';
 
 export function ExploreModule() {
-  return <SymbolExplorer />;
+  const initial = useModuleInitial<ExploreInitial>('explore');
+  return <SymbolExplorer initial={initial ?? undefined} />;
 }

@@ -8,6 +8,7 @@
  *   GET  /api/search?q=&limit=         — FTS search → SearchHit[]
  *   GET  /api/symbol/:id               — full symbol detail + source + neighbours
  *   GET  /api/trace?from=&to=          — shortest call path between two symbols
+ *   GET  /api/routes                   — HTTP routes detected by framework resolvers
  *
  * Plus static files from `staticDir` (the bundled frontend) when provided.
  */
@@ -23,6 +24,7 @@ import {
   handleSearch,
   handleSymbol,
   handleTrace,
+  handleRoutes,
   HandlerError,
 } from './handlers';
 import type { ServerOptions } from './types';
@@ -118,6 +120,20 @@ async function handleRequest(
     const from = url.searchParams.get('from') ?? '';
     const to = url.searchParams.get('to') ?? '';
     sendJSON(res, 200, handleTrace(cg, from, to));
+    return;
+  }
+
+  if (pathname === '/api/routes') {
+    sendJSON(res, 200, handleRoutes(cg));
+    return;
+  }
+
+  // Anything under /api/ that didn't match above is a missing endpoint, NOT a
+  // SPA route. Returning index.html here would make `fetch('/api/x').then(r=>r.json())`
+  // try to parse HTML and throw a confusing "string did not match the expected
+  // pattern" error in the browser instead of a clean 404.
+  if (pathname.startsWith('/api/')) {
+    sendJSON(res, 404, { error: `Unknown API endpoint: ${pathname}` });
     return;
   }
 

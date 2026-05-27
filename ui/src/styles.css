@@ -441,6 +441,108 @@ pre.code-block .code-line.highlighted {
 }
 
 /* =========================================================================
+   Routes view
+   ========================================================================= */
+.routes-pane { display: flex; flex-direction: column; height: 100%; min-height: 0; }
+.routes-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-panel);
+}
+.routes-toolbar input { flex: 1; min-width: 200px; }
+.routes-toolbar select {
+  background: var(--bg-elevated);
+  color: var(--fg);
+  border: 1px solid var(--border);
+  padding: 6px 10px;
+  border-radius: 6px;
+  font: inherit;
+}
+.routes-count { color: var(--fg-muted); font-size: 12px; white-space: nowrap; }
+
+.routes-table-wrapper { flex: 1; overflow: auto; }
+.routes-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.routes-table thead th {
+  position: sticky;
+  top: 0;
+  background: var(--bg-panel);
+  text-align: left;
+  font-weight: 600;
+  font-size: 11.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--fg-muted);
+  border-bottom: 1px solid var(--border);
+  padding: 10px 14px;
+  z-index: 1;
+}
+.routes-table tbody td {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+.route-row:hover { background: var(--bg-elevated); }
+
+.method-badge {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  color: var(--fg-muted);
+  background: var(--bg-elevated);
+  min-width: 56px;
+  text-align: center;
+}
+.method-badge.method-get { color: var(--accent-ok); border-color: rgba(121, 227, 168, 0.35); }
+.method-badge.method-post { color: var(--accent); border-color: rgba(121, 184, 255, 0.35); }
+.method-badge.method-put,
+.method-badge.method-patch { color: var(--accent-warn); border-color: rgba(240, 184, 109, 0.35); }
+.method-badge.method-delete { color: var(--accent-error); border-color: rgba(239, 111, 122, 0.35); }
+.method-badge.method-any,
+.method-badge.method-all,
+.method-badge.method-use { color: var(--accent-synth); border-color: rgba(197, 150, 255, 0.3); }
+
+.route-path { font-family: var(--font-mono); color: var(--fg-strong); }
+button.link-button.route-path { font-family: var(--font-mono); color: var(--accent); text-align: left; }
+button.link-button.route-path:hover { color: var(--accent-hover); }
+.route-raw { font-family: var(--font-mono); font-size: 11px; color: var(--fg-subtle); margin-top: 2px; }
+.route-meta { color: var(--fg-muted); font-size: 11.5px; font-family: var(--font-mono); }
+.route-extra { color: var(--fg-muted); font-size: 11px; margin-left: 6px; }
+
+.framework-pill {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  color: var(--fg-muted);
+  font-size: 11px;
+}
+
+.link-button {
+  background: transparent;
+  border: none;
+  padding: 0;
+  color: var(--accent);
+  font: inherit;
+  cursor: pointer;
+  border-radius: 0;
+}
+.link-button:hover:not(:disabled) { color: var(--accent-hover); background: transparent; text-decoration: underline; }
+.link-button:disabled { color: var(--fg-subtle); cursor: not-allowed; }
+.route-actions { display: flex; gap: 8px; justify-content: flex-end; }
+
+/* =========================================================================
    Scrollbar
    ========================================================================= */
 ::-webkit-scrollbar { width: 10px; height: 10px; }
