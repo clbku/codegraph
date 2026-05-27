@@ -1716,7 +1716,97 @@ program
     }
   });
 
+/**
+ * codegraph ui [path]
+ *
+ * Launch the local UI dashboard — a visual frontend over the indexed graph.
+ * The CLI/MCP server stays the agent surface; this is the human surface.
+ */
+program
+  .command('ui [path]')
+  .description('Launch the visual UI dashboard for exploring the indexed code graph')
+  .option('-p, --port <port>', 'Port to listen on (default: 7777)', '7777')
+  .option('-h, --host <host>', 'Host to bind to (default: 127.0.0.1)', '127.0.0.1')
+  .option('--no-open', 'Do not automatically open the browser')
+  .action(async (pathArg: string | undefined, options: { port: string; host: string; open?: boolean }) => {
+    const projectPath = resolveProjectPath(pathArg);
+    const port = parseInt(options.port, 10);
+    if (!Number.isFinite(port) || port < 1 || port > 65535) {
+      error(`Invalid port: ${options.port}`);
+      process.exit(1);
+    }
+
+    if (!isInitialized(projectPath)) {
+      error(`CodeGraph not initialized in "${projectPath}". Run \`codegraph init\` first.`);
+      process.exit(1);
+    }
+
+    const { CodeGraph } = await loadCodeGraph();
+    const { startUIServer } = await import('../ui-server');
+
+    const cg = await CodeGraph.open(projectPath, { readOnly: true });
+    // Frontend bundle lives at `dist/ui-static/` — separate from the TS-compiled
+    // `dist/ui/` (which holds shimmer-progress + other CLI UI helpers).
+    const candidateStatic = path.join(__dirname, '..', 'ui-static');
+    const staticDir = fs.existsSync(path.join(candidateStatic, 'index.html'))
+      ? candidateStatic
+      : null;
+
+    let handle;
+    try {
+      handle = await startUIServer(cg, {
+        port,
+        host: options.host,
+        staticDir,
+      });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg.includes('EADDRINUSE')) {
+        error(`Port ${port} is already in use. Try: codegraph ui --port <other>`);
+      } else {
+        error(`Failed to start UI server: ${msg}`);
+      }
+      await cg.close();
+      process.exit(1);
+    }
+
+    success(`CodeGraph UI running at ${handle.url}`);
+    if (!staticDir) {
+      warn('Frontend bundle not found at dist/ui/. API-only mode — run `npm run build:ui` to enable the UI.');
+    }
+
+    if (options.open !== false) {
+      openBrowser(handle.url).catch(() => {
+        info(`Open ${handle.url} in your browser`);
+      });
+    } else {
+      info(`Open ${handle.url} in your browser (browser auto-open disabled)`);
+    }
+
+    const shutdown = async () => {
+      info('Shutting down UI server...');
+      try {
+        await handle.close();
+        await cg.close();
+      } finally {
+        process.exit(0);
+      }
+    };
+    process.on('SIGINT', shutdown);
+    process.on('SIGTERM', shutdown);
+  });
+
 // Parse and run
 program.parse();
 
 } // end main()
+
+async function openBrowser(url: string): Promise<void> {
+  const { spawn } = await import('child_process');
+  const cmd = process.platform === 'darwin' ? 'open'
+    : process.platform === 'win32' ? 'cmd'
+    : 'xdg-open';
+  const args = process.platform === 'win32' ? ['/c', 'start', '""', url] : [url];
+  const child = spawn(cmd, args, { detached: true, stdio: 'ignore' });
+  child.unref();
+}

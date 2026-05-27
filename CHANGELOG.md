@@ -10,6 +10,21 @@ and adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Added
+- **`codegraph ui` — local browser dashboard for exploring the indexed graph.**
+  A new CLI subcommand spins up a loopback HTTP server (default
+  `127.0.0.1:7777`, `--host 0.0.0.0` to share over a private network like
+  Tailscale, `--port` to override) and serves a React frontend with two
+  modules out of the box: **Explore** — typeahead search across the FTS5
+  index, click a symbol to see its source, signature, callers, callees, and
+  container chain; and **Trace** — enter two symbol names to render the
+  shortest call path as a Cytoscape graph with the per-hop source inlined and
+  the outgoing call site highlighted. Synthesized edges (callbacks, React
+  re-renders, JSX children) appear as dashed purple arrows so the
+  dynamic-dispatch bridges are visible. The backend is zero-dependency (uses
+  Node's built-in `http`), the frontend is bundled at build time into
+  `dist/ui-static/`, and a module-registry pattern (`src/shell/modules.tsx`)
+  makes adding a new view a one-file change. The CLI/MCP server remains the
+  agent surface; this is the human surface.
 - **Java / Kotlin imports now resolve by fully-qualified name.** Extraction
   wraps every top-level declaration of a `.kt` / `.java` file in a `namespace`
   node carrying the file's `package` (so a class `Bar` in
